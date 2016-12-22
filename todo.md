@@ -1,1 +1,6 @@
 - [ ] add tests confirming the initial object being referenced is still accessible after creating the handover package
+- [ ] add more tests
+- [ ] do subclassed tests for different thread confined types if easy to do
+- [ ] port Thomas's cocoa tests that were added when the delivery semantics were corrected
+- [ ] write long-form docs
+- [ ] draft release post
