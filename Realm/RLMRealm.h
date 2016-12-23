@@ -408,23 +408,18 @@ typedef void (^RLMNotificationBlock)(RLMNotification notification, RLMRealm *rea
 #pragma mark - Accessing Objects
 
 /**
- Resolves the reference in the current Realm at its latest version for this thread.
-
  Returns the same object as the one referenced when the `RLMThreadSafeReference` was first created,
- advanced to the current Realm's version.
-
- Returns `nil` if this object was deleted after the reference was created, or if the thread
- hand-over operation failed.
+ but resolved for the current Realm for this thread. Returns `nil` if this object was deleted after
+ the reference was created, or if the operation failed.
 
  @param reference The thread-safe reference to the thread-confined object to resolve in this Realm.
 
- @return The thread-confined object referenced, advanced to the current Realm's version.
-
  @warning Every `RLMThreadSafeReference` object created must be resolved exactly once.
-          An exception will be thrown if a referenced is resolved more than once.
-          The source Realm backing the referenced object will not advance until all its existing
-          thread-safe references have been resolved. This means autorefresh and explicitly calling
-          `-[RLMRealm refresh]` will fail until all references have been resolved or deallocated.
+          An exception will be thrown if a reference is resolved more than once.
+
+ @warning Cannot call within a write transaction.
+
+ @note Will refresh this Realm if the source Realm was at a later version than this one.
 
  @see `+[RLMThreadSafeReference referenceWithThreadConfined:]`
  */

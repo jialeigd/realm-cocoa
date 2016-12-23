@@ -51,10 +51,11 @@ public protocol ThreadConfined {
 
  - warning: Every `ThreadSafeReference` object created must be resolved exactly once.
             An exception will be thrown if a referenced is resolved more than once.
-            The source Realm backing the referenced object will not advance until all its existing
-            thread-safe references have been resolved. This means autorefresh and explicitly calling
-            `Realm.refresh()` will fail until all references have been resolved or deallocated.
 
+ - note: Prefer short-lived `ThreadSafeReference`s as the data for the version of the source Realm
+         will be retained until all references have been resolved or deallocated.
+
+ - see: `ThreadConfined`
  - see: `Realm.resolve(_:)`
  */
 public class ThreadSafeReference<Confined: ThreadConfined> {
@@ -70,11 +71,11 @@ public class ThreadSafeReference<Confined: ThreadConfined> {
      Create a thread-safe reference to the thread-confined object.
 
      - param threadConfined: The thread-confined object to create a thread-safe reference to.
+
+     - note: You may continue to use and access the thread-confined object after passing it to this
+             constructor.
      */
     public init(to threadConfined: Confined) {
-        // TODO: It might be necessary to check `invalidated` and `Realm` here. I'm not certain that bridging succeeds
-        //       when these are false/nil.
-
         let bridged = (threadConfined as! AssistedObjectiveCBridgeable).bridged
         self.swiftMetadata = bridged.metadata
 #if swift(>=3.0)
@@ -98,25 +99,19 @@ public class ThreadSafeReference<Confined: ThreadConfined> {
 extension Realm {
 #if swift(>=3.0)
     /**
-     Resolves the reference in the current Realm at its latest version for this thread.
+     Returns the same object as the one referenced when the `RLMThreadSafeReference` was first
+     created, but resolved for the current Realm for this thread. Returns `nil` if this object was
+     deleted after the reference was created, or if the operation failed.
 
-     Returns the same object as the one referenced when the `ThreadSafeReference` was first created,
-     advanced to the current Realm's version.
+     - param reference: The thread-safe reference to the thread-confined object to resolve in this
+                        Realm.
 
-     Returns `nil` if this object was deleted after the reference was created, or if the thread
-     hand-over operation failed.
+     - warning: Every `RLMThreadSafeReference` object created must be resolved exactly once.
+                An exception will be thrown if a reference is resolved more than once.
 
-     - parameter reference: The thread-safe reference to the thread-confined object to resolve in
-                            this Realm.
+     - warning: Cannot call within a write transaction.
 
-     - returns: The thread-confined object referenced, advanced to the current Realm's version.
-
-     - warning: Every `ThreadSafeReference` object created must be resolved exactly once.
-                An exception will be thrown if a referenced is resolved more than once.
-                The source Realm backing the referenced object will not advance until all its
-                existing thread-safe references have been resolved. This means autorefresh and
-                explicitly calling `Realm.refresh()` will fail until all references have been
-                resolved or deallocated.
+     - note: Will refresh this Realm if the source Realm was at a later version than this one.
 
      - see: `ThreadSafeReference(to:)`
      */
@@ -125,25 +120,19 @@ extension Realm {
     }
 #else
     /**
-     Resolves the reference in the current Realm at its latest version for this thread.
+     Returns the same object as the one referenced when the `RLMThreadSafeReference` was first
+     created, but resolved for the current Realm for this thread. Returns `nil` if this object was
+     deleted after the reference was created, or if the operation failed.
 
-     Returns the same object as the one referenced when the `ThreadSafeReference` was first created,
-     advanced to the current Realm's version.
+     - param reference: The thread-safe reference to the thread-confined object to resolve in this
+                        Realm.
 
-     Returns `nil` if this object was deleted after the reference was created, or if the thread
-     hand-over operation failed.
+     - warning: Every `RLMThreadSafeReference` object created must be resolved exactly once.
+                An exception will be thrown if a reference is resolved more than once.
 
-     - parameter reference: The thread-safe reference to the thread-confined object to resolve in
-                            this Realm.
+     - warning: Cannot call within a write transaction.
 
-     - returns: The thread-confined object referenced, advanced to the current Realm's version.
-
-     - warning: Every `ThreadSafeReference` object created must be resolved exactly once.
-                An exception will be thrown if a referenced is resolved more than once.
-                The source Realm backing the referenced object will not advance until all its
-                existing thread-safe references have been resolved. This means autorefresh and
-                explicitly calling `Realm.refresh()` will fail until all references have been
-                resolved or deallocated.
+     - note: Will refresh this Realm if the source Realm was at a later version than this one.
 
      - see: `ThreadSafeReference(to:)`
      */

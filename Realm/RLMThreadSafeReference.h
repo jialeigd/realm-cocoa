@@ -53,10 +53,11 @@ NS_ASSUME_NONNULL_BEGIN
 
  @warning Every `RLMThreadSafeReference` object created must be resolved exactly once.
           An exception will be thrown if a referenced is resolved more than once.
-          The source Realm backing the referenced object will not advance until all its existing
-          thread-safe references have been resolved. This means autorefresh and explicitly calling
-          `-[RLMRealm refresh]` will fail until all references have been resolved or deallocated.
 
+ @note Prefer short-lived `RLMThreadSafeReference`s as the data for the version of the source Realm
+       will be retained until all references have been resolved or deallocated.
+
+ @see `RLMThreadConfined`
  @see `-[RLMRealm resolveThreadSafeReference:]`
  */
 @interface RLMThreadSafeReference<__covariant Confined : id<RLMThreadConfined>> : NSObject
@@ -65,6 +66,9 @@ NS_ASSUME_NONNULL_BEGIN
  Create a thread-safe reference to the thread-confined object.
 
  @param threadConfined The thread-confined object to create a thread-safe reference to.
+
+ @note You may continue to use and access the thread-confined object after passing it to this
+       constructor.
  */
 + (instancetype)referenceWithThreadConfined:(Confined)threadConfined;
 
