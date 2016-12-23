@@ -41,12 +41,9 @@
         @throw RLMException(@"Cannot construct reference to invalidated object");
     }
     if (!threadConfined.realm) {
-        @throw RLMException(@"Cannot construct reference to unmanaged object,"
+        @throw RLMException(@"Cannot construct reference to unmanaged object, "
                             "which can be passed across threads directly");
     }
-
-    // TODO: C++ exception is thrown if this is the wrong thread. Should this be translated to a RLMException?
-    //       Should we check the thread ourselves here?
     _reference = [(id<RLMThreadConfined_Private>)threadConfined rlm_newThreadSafeReference];
     _metadata = ((id<RLMThreadConfined_Private>)threadConfined).rlm_objectiveCMetadata;
     _type = threadConfined.class;
