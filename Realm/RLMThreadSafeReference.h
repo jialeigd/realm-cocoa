@@ -73,8 +73,8 @@ NS_ASSUME_NONNULL_BEGIN
 + (instancetype)referenceWithThreadConfined:(Confined)threadConfined;
 
 /**
- Indicates if the reference can no longer be resolved because the referenced object has been
- deleted.
+ Indicates if the reference can no longer be resolved because an attempt to resolve it has already
+ occurred. References can only be resolved once.
  */
 @property (nonatomic, readonly, getter = isInvalidated) BOOL invalidated;
 
