@@ -22,26 +22,6 @@ import RealmSwift
 #if swift(>=3.0)
 
 class ThreadSafeReferenceTests: TestCase {
-    func testThreadSafeReferenceToObject() {
-        let realm = try! Realm()
-        let object = SwiftBoolObject()
-        try! realm.write {
-            realm.add(object)
-        }
-        XCTAssertEqual(false, object.boolCol)
-        let objectRef = ThreadSafeReference(to: object)
-        dispatchSyncNewThread {
-            let realm = try! Realm()
-            let object = realm.resolve(objectRef)!
-            try! realm.write {
-                object.boolCol = true
-            }
-        }
-        XCTAssertEqual(false, object.boolCol)
-        realm.refresh()
-        XCTAssertEqual(true, object.boolCol)
-    }
-
     func testThreadSafeReferencesToMultipleObjects() {
         let realm = try! Realm()
         let (stringObject, intObject) = (SwiftStringObject(), SwiftIntObject())
@@ -49,10 +29,10 @@ class ThreadSafeReferenceTests: TestCase {
             realm.add(stringObject)
             realm.add(intObject)
         }
-        XCTAssertEqual("", stringObject.stringCol)
-        XCTAssertEqual(0, intObject.intCol)
         let stringObjectRef = ThreadSafeReference(to: stringObject)
         let intObjectRef = ThreadSafeReference(to: intObject)
+        XCTAssertEqual("", stringObject.stringCol)
+        XCTAssertEqual(0, intObject.intCol)
         dispatchSyncNewThread {
             let realm = try! Realm()
             let stringObject = realm.resolve(stringObjectRef)!

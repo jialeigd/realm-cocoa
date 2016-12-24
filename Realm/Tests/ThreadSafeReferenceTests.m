@@ -27,6 +27,16 @@
 
 @implementation ThreadSafeReferenceTests
 
+/// Resolve a thread-safe reference confirming that you can't resolve it a second time.
+- (id)assertResolve:(RLMRealm *)realm reference:(RLMThreadSafeReference *)reference {
+    XCTAssertFalse(reference.isInvalidated);
+    id object = [realm resolveThreadSafeReference:reference];
+    XCTAssertTrue(reference.isInvalidated);
+    RLMAssertThrowsWithReasonMatching([realm resolveThreadSafeReference:reference],
+                                      @"Can only resolve a thread safe reference once");
+    return object;
+}
+
 - (void)testInvalidThreadSafeReferenceConstruction {
     RLMRealmConfiguration *configuration = [RLMRealmConfiguration defaultConfiguration];
     configuration.cache = false;
@@ -54,6 +64,34 @@
                                       @"Cannot construct reference to unmanaged object");
 }
 
+- (void)testInvalidThreadSafeReferenceUsage {
+    RLMRealm *realm = [RLMRealm defaultRealm];
+    [realm beginWriteTransaction];
+    StringObject *stringObject = [StringObject createInDefaultRealmWithValue:@{@"stringCol": @"hello"}];
+    RLMAssertThrowsWithReasonMatching([RLMThreadSafeReference referenceWithThreadConfined:stringObject],
+                                      @"Cannot obtain thread safe reference during a write transaction");
+    [realm commitWriteTransaction];
+
+    RLMThreadSafeReference *ref1 = [RLMThreadSafeReference referenceWithThreadConfined:stringObject];
+    RLMThreadSafeReference *ref2 = [RLMThreadSafeReference referenceWithThreadConfined:stringObject];
+    RLMThreadSafeReference *ref3 = [RLMThreadSafeReference referenceWithThreadConfined:stringObject];
+    [self dispatchAsyncAndWait:^{
+        RLMRealm *realm = [RLMRealm defaultRealm];
+        RLMAssertThrowsWithReasonMatching([[self realmWithTestPath] resolveThreadSafeReference:ref1],
+                                          @"Cannot resolve thread safe reference in Realm with different configuration than the source Realm");
+        [realm beginWriteTransaction];
+        RLMAssertThrowsWithReasonMatching([realm resolveThreadSafeReference:ref2],
+                                          @"Cannot resolve thread safe reference during a write transaction");
+        RLMAssertThrowsWithReasonMatching([realm resolveThreadSafeReference:ref2],
+                                          @"Can only resolve a thread safe reference once");
+        [realm cancelWriteTransaction];
+        RLMAssertThrowsWithReasonMatching([realm resolveThreadSafeReference:ref2],
+                                          @"Can only resolve a thread safe reference once");
+        // Assert that we can resolve a different reference to the same object.
+        XCTAssertEqualObjects([self assertResolve:realm reference:ref3][@"stringCol"], @"hello");
+    }];
+}
+
 - (void)testHandoverObjects {
     RLMRealm *realm = [RLMRealm defaultRealm];
     StringObject *stringObject = [[StringObject alloc] init];
@@ -69,8 +107,8 @@
     XCTAssertEqual(0, intObject.intCol);
     [self dispatchAsyncAndWait:^{
         RLMRealm *realm = [RLMRealm defaultRealm];
-        StringObject *stringObject = [realm resolveThreadSafeReference:stringObjectRef];
-        IntObject *intObject = [realm resolveThreadSafeReference:intObjectRef];
+        StringObject *stringObject = [self assertResolve:realm reference:stringObjectRef];
+        IntObject *intObject = [self assertResolve:realm reference:intObjectRef];
 
         [realm transactionWithBlock:^{
             stringObject.stringCol = @"the meaning of life";
@@ -97,7 +135,7 @@
     XCTAssertEqualObjects(@"Friday", object.dogs[0].dogName);
     [self dispatchAsyncAndWait:^{
         RLMRealm *realm = [RLMRealm defaultRealm];
-        RLMArray<DogObject *> *dogs = [realm resolveThreadSafeReference:dogsArrayRef];
+        RLMArray<DogObject *> *dogs = [self assertResolve:realm reference:dogsArrayRef];
         XCTAssertEqual(1ul, dogs.count);
         XCTAssertEqualObjects(@"Friday", dogs[0].dogName);
 
@@ -138,7 +176,7 @@
     XCTAssertEqualObjects(@"A", results[2].stringCol);
     [self dispatchAsyncAndWait:^{
         RLMRealm *realm = [RLMRealm defaultRealm];
-        RLMResults<StringObject *> *results = [realm resolveThreadSafeReference:resultsRef];
+        RLMResults<StringObject *> *results = [self assertResolve:realm reference:resultsRef];
         RLMResults<StringObject *> *allObjects = [StringObject allObjects];
         XCTAssertEqual(0ul, [StringObject allObjects].count);
         XCTAssertEqual(0ul, results.count);
@@ -180,7 +218,7 @@
     RLMThreadSafeReference *dogOwnersRef = [RLMThreadSafeReference referenceWithThreadConfined:dog.owners];
     [self dispatchAsyncAndWait:^{
         RLMRealm *realm = [RLMRealm defaultRealm];
-        RLMLinkingObjects<OwnerObject *> *owners = [realm resolveThreadSafeReference:dogOwnersRef];
+        RLMLinkingObjects<OwnerObject *> *owners = [self assertResolve:realm reference:dogOwnersRef];
         XCTAssertEqual(1ul, owners.count);
         XCTAssertEqualObjects(@"Jaden", ((OwnerObject *)owners[0]).name);
 
