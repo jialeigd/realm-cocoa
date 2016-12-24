@@ -61,9 +61,22 @@ public protocol ThreadConfined {
 public class ThreadSafeReference<Confined: ThreadConfined> {
     private let swiftMetadata: Any?
     private let type: ThreadConfined.Type
+
 #if swift(>=3.0)
+    /**
+     Indicates if the reference can no longer be resolved because an attempt to resolve it has
+     already occurred. References can only be resolved once.
+     */
+    var isInvalidated: Bool { return objectiveCReference.isInvalidated }
+
     private let objectiveCReference: RLMThreadSafeReference<RLMThreadConfined>
 #else
+    /**
+     Indicates if the reference can no longer be resolved because an attempt to resolve it has
+     already occurred. References can only be resolved once.
+     */
+    var invalidated: Bool { return objectiveCReference.invalidated }
+
     private let objectiveCReference: RLMThreadSafeReference
 #endif
 
@@ -77,13 +90,13 @@ public class ThreadSafeReference<Confined: ThreadConfined> {
      */
     public init(to threadConfined: Confined) {
         let bridged = (threadConfined as! AssistedObjectiveCBridgeable).bridged
-        self.swiftMetadata = bridged.metadata
+        swiftMetadata = bridged.metadata
 #if swift(>=3.0)
-        self.type = type(of: threadConfined)
+        type = type(of: threadConfined)
 #else
-        self.type = threadConfined.dynamicType
+        type = threadConfined.dynamicType
 #endif
-        self.objectiveCReference = RLMThreadSafeReference(threadConfined: bridged.objectiveCValue as! RLMThreadConfined)
+        objectiveCReference = RLMThreadSafeReference(threadConfined: bridged.objectiveCValue as! RLMThreadConfined)
     }
 
     internal func resolve(in realm: Realm) -> Confined? {
