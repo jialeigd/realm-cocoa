@@ -92,6 +92,27 @@
     }];
 }
 
+- (void)testHandoverDeletedObject {
+    RLMRealm *realm = [RLMRealm defaultRealm];
+    IntObject *intObject = [[IntObject alloc] init];
+    [realm transactionWithBlock:^{
+        [realm addObject:intObject];
+    }];
+
+    RLMThreadSafeReference *ref1 = [RLMThreadSafeReference referenceWithThreadConfined:intObject];
+    RLMThreadSafeReference *ref2 = [RLMThreadSafeReference referenceWithThreadConfined:intObject];
+    XCTAssertEqual(0, intObject.intCol);
+    [realm transactionWithBlock:^{
+        [realm deleteObject:intObject];
+    }];
+    [self dispatchAsyncAndWait:^{
+        RLMRealm *realm = [RLMRealm defaultRealm];
+        XCTAssertEqualObjects([self assertResolve:realm reference:ref1][@"intCol"], @0);
+        [realm refresh];
+        XCTAssertNil([self assertResolve:realm reference:ref2]);
+    }];
+}
+
 - (void)testHandoverObjects {
     RLMRealm *realm = [RLMRealm defaultRealm];
     StringObject *stringObject = [[StringObject alloc] init];
