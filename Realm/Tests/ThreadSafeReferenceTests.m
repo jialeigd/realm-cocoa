@@ -62,11 +62,11 @@
         [realm addObject:stringObject];
         [realm addObject:intObject];
     }];
-    XCTAssertEqualObjects(nil, stringObject.stringCol);
-    XCTAssertEqual(0, intObject.intCol);
 
     RLMThreadSafeReference *stringObjectRef = [RLMThreadSafeReference referenceWithThreadConfined:stringObject];
     RLMThreadSafeReference *intObjectRef = [RLMThreadSafeReference referenceWithThreadConfined:intObject];
+    XCTAssertEqualObjects(nil, stringObject.stringCol);
+    XCTAssertEqual(0, intObject.intCol);
     [self dispatchAsyncAndWait:^{
         RLMRealm *realm = [RLMRealm defaultRealm];
         StringObject *stringObject = [realm resolveThreadSafeReference:stringObjectRef];
@@ -92,9 +92,9 @@
         DogObject *friday = [DogObject createInDefaultRealmWithValue:@{@"dogName": @"Friday", @"age": @15}];
         [object.dogs addObject:friday];
     }];
+    RLMThreadSafeReference *dogsArrayRef = [RLMThreadSafeReference referenceWithThreadConfined:object.dogs];
     XCTAssertEqual(1ul, object.dogs.count);
     XCTAssertEqualObjects(@"Friday", object.dogs[0].dogName);
-    RLMThreadSafeReference *dogsArrayRef = [RLMThreadSafeReference referenceWithThreadConfined:object.dogs];
     [self dispatchAsyncAndWait:^{
         RLMRealm *realm = [RLMRealm defaultRealm];
         RLMArray<DogObject *> *dogs = [realm resolveThreadSafeReference:dogsArrayRef];
@@ -105,7 +105,7 @@
             [dogs removeAllObjects];
             DogObject *cookie = [DogObject createInDefaultRealmWithValue:@{@"dogName": @"Cookie", @"age": @8}];
             DogObject *breezy = [DogObject createInDefaultRealmWithValue:@{@"dogName": @"Breezy", @"age": @6}];
-            [dogs addObjects: @[cookie, breezy]];
+            [dogs addObjects:@[cookie, breezy]];
         }];
         XCTAssertEqual(2ul, dogs.count);
         XCTAssertEqualObjects(@"Cookie", dogs[0].dogName);
@@ -121,24 +121,29 @@
 
 - (void)testHandoverResults {
     RLMRealm *realm = [RLMRealm defaultRealm];
+    RLMResults<StringObject *> *allObjects = [StringObject allObjects];
     RLMResults<StringObject *> *results = [[StringObject objectsWhere:@"stringCol != 'C'"]
                                            sortedResultsUsingProperty:@"stringCol" ascending:NO];
+    RLMThreadSafeReference *resultsRef = [RLMThreadSafeReference referenceWithThreadConfined:results];
     [realm transactionWithBlock:^{
         [StringObject createInDefaultRealmWithValue:@[@"A"]];
         [StringObject createInDefaultRealmWithValue:@[@"B"]];
         [StringObject createInDefaultRealmWithValue:@[@"C"]];
         [StringObject createInDefaultRealmWithValue:@[@"D"]];
     }];
-    XCTAssertEqual(4ul, [StringObject allObjects].count);
+    XCTAssertEqual(4ul, allObjects.count);
     XCTAssertEqual(3ul, results.count);
     XCTAssertEqualObjects(@"D", results[0].stringCol);
     XCTAssertEqualObjects(@"B", results[1].stringCol);
     XCTAssertEqualObjects(@"A", results[2].stringCol);
-    RLMThreadSafeReference *resultsRef = [RLMThreadSafeReference referenceWithThreadConfined:results];
     [self dispatchAsyncAndWait:^{
         RLMRealm *realm = [RLMRealm defaultRealm];
         RLMResults<StringObject *> *results = [realm resolveThreadSafeReference:resultsRef];
-        XCTAssertEqual(4ul, [StringObject allObjects].count);
+        RLMResults<StringObject *> *allObjects = [StringObject allObjects];
+        XCTAssertEqual(0ul, [StringObject allObjects].count);
+        XCTAssertEqual(0ul, results.count);
+        [realm refresh];
+        XCTAssertEqual(4ul, allObjects.count);
         XCTAssertEqual(3ul, results.count);
         XCTAssertEqualObjects(@"D", results[0].stringCol);
         XCTAssertEqualObjects(@"B", results[1].stringCol);
@@ -148,7 +153,7 @@
             [realm deleteObject:results[0]];
             [StringObject createInDefaultRealmWithValue:@[@"E"]];
         }];
-        XCTAssertEqual(3ul, [StringObject allObjects].count);
+        XCTAssertEqual(3ul, allObjects.count);
         XCTAssertEqual(2ul, results.count);
         XCTAssertEqualObjects(@"E", results[0].stringCol);
         XCTAssertEqualObjects(@"B", results[1].stringCol);
@@ -158,7 +163,7 @@
     XCTAssertEqualObjects(@"B", results[1].stringCol);
     XCTAssertEqualObjects(@"A", results[2].stringCol);
     [realm refresh];
-    XCTAssertEqual(3ul, [StringObject allObjects].count);
+    XCTAssertEqual(3ul, allObjects.count);
     XCTAssertEqual(2ul, results.count);
     XCTAssertEqualObjects(@"E", results[0].stringCol);
     XCTAssertEqualObjects(@"B", results[1].stringCol);
